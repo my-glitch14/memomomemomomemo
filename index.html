@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>手帳 — スマートメモ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  /* ===== Reset & Base ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { height: 100%; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #F7F5F0;
+    color: #1C1C1A;
+    height: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== CSS Variables ===== */
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface-2: #F0EDE8;
+    --border: rgba(28,28,26,0.12);
+    --border-strong: rgba(28,28,26,0.22);
+    --text: #1C1C1A;
+    --text-2: #5A5955;
+    --text-3: #9B9890;
+    --accent: #2D5A3D;
+    --accent-light: #E8F0EB;
+    --accent-text: #1A3D28;
+    --tag-book-bg: #E8F0F8; --tag-book: #1A3A5C;
+    --tag-media-bg: #EDEBF8; --tag-media: #352D6B;
+    --tag-task-bg: #E8F0EB; --tag-task: #1A3D28;
+    --tag-feel-bg: #F8EBF0; --tag-feel: #5C1A35;
+    --tag-other-bg: #F0EDE8; --tag-other: #4A4845;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+  }
+
+  /* ===== Layout ===== */
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .topbar {
+    height: 52px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .topbar-search {
+    flex: 1;
+    max-width: 360px;
+    position: relative;
+  }
+  .topbar-search input {
+    width: 100%;
+    height: 34px;
+    padding: 0 12px 0 34px;
+    font-family: inherit;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface-2);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .topbar-search input:focus {
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+  .search-icon {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-3);
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-new {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .btn-new:hover { background: #224d32; }
+  .btn-new:active { transform: scale(0.97); }
+
+  /* ===== Main Area ===== */
+  .workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    width: 200px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding: 12px 10px 6px;
+  }
+
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text-2);
+    width: 100%;
+    text-align: left;
+    transition: background 0.12s, color 0.12s;
+  }
+  .filter-btn:hover { background: var(--surface-2); color: var(--text); }
+  .filter-btn.active { background: var(--accent-light); color: var(--accent-text); font-weight: 500; }
+
+  .filter-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .filter-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-3);
+    min-width: 16px;
+    text-align: right;
+  }
+
+  /* ===== Memo List ===== */
+  .memo-list-wrap {
+    width: 280px;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .list-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .list-header-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .memo-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .memo-item {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.12s;
+    position: relative;
+  }
+  .memo-item:hover { background: var(--surface-2); }
+  .memo-item.active {
+    background: var(--surface);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+
+  .memo-item-date {
+    font-size: 10px;
+    color: var(--text-3);
+    margin-bottom: 4px;
+  }
+  .memo-item-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .memo-item.active .memo-item-title { color: var(--accent-text); }
+  .memo-item-preview {
+    font-size: 12px;
+    color: var(--text-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 8px;
+  }
+  .memo-item-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+
+  .tag-pill {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+
+  .list-empty {
+    padding: 40px 16px;
+    text-align: center;
+    color: var(--text-3);
+    font-size: 13px;
+  }
+
+  /* ===== Editor ===== */
+  .editor-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .editor-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-3);
+  }
+  .editor-empty-icon {
+    width: 48px; height: 48px;
+    opacity: 0.3;
+  }
+  .editor-empty-text { font-size: 14px; }
+
+  .editor-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .editor-header {
+    padding: 20px 24px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .ed-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    border: none;
+    background: none;
+    outline: none;
+    width: 100%;
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .ed-title::placeholder { color: var(--text-3); font-weight: 400; }
+
+  .tags-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-height: 28px;
+  }
+  .tags-label {
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 20px;
+    cursor: default;
+  }
+  .tag-chip .rm {
+    cursor: pointer;
+    opacity: 0.5;
+    font-size: 13px;
+    line-height: 1;
+    transition: opacity 0.1s;
+    padding: 0 0 0 2px;
+  }
+  .tag-chip .rm:hover { opacity: 1; }
+
+  .btn-ai {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 11px;
+    border-radius: 20px;
+    border: 1.5px dashed var(--border-strong);
+    background: none;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    position: relative;
+  }
+  .btn-ai:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-text); }
+
+  .suggest-popup {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 260px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+    display: none;
+  }
+  .suggest-popup.open { display: block; }
+  .suggest-heading {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 10px;
+  }
+  .suggest-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .suggest-tag {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .suggest-tag:hover { background: var(--accent-light); color: var(--accent-text); border-color: var(--accent); }
+
+  .loading-dots {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-3);
+    font-size: 13px;
+  }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-3); animation: pulse 1.2s ease-in-out infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+
+  /* ===== Editor Body ===== */
+  .editor-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+  }
+
+  .ed-textarea {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    line-height: 2;
+    color: var(--text);
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    resize: none;
+    border: none;
+    background: none;
+    outline: none;
+  }
+  .ed-textarea::placeholder { color: var(--text-3); }
+
+  /* ===== Editor Footer ===== */
+  .editor-footer {
+    padding: 12px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .footer-meta { font-size: 11px; color: var(--text-3); flex: 1; }
+
+  .btn {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .btn:hover { background: var(--surface-2); color: var(--text); }
+  .btn-danger:hover { background: #FEE2E2; color: #991B1B; border-color: #FECACA; }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+  .btn-primary:hover { background: #224d32; }
+
+  /* ===== API Key Banner ===== */
+  .api-banner {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    font-size: 12px;
+    color: #92400E;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 24px;
+    flex-shrink: 0;
+  }
+  .api-banner input {
+    flex: 1;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-family: monospace;
+    border: 1px solid #FDE68A;
+    border-radius: 4px;
+    background: #FFFEF7;
+    color: #1C1C1A;
+    outline: none;
+  }
+  .api-banner input:focus { border-color: #F59E0B; }
+  .btn-sm {
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid #F59E0B;
+    background: #F59E0B;
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1C1C1A;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    z-index: 9999;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ===== Scrollbar ===== */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .memo-list-wrap { width: 240px; }
+  }
+  @media (max-width: 560px) {
+    .memo-list-wrap { width: 100%; display: none; }
+    .memo-list-wrap.mobile-show { display: flex; position: fixed; left: 0; top: 52px; bottom: 0; z-index: 50; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="logo">📓 手帳</div>
+    <div class="topbar-search">
+      <svg class="search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="6.5" cy="6.5" r="4.5"/>
+        <path d="M10.5 10.5l3.5 3.5" stroke-linecap="round"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="メモを検索..." oninput="onSearch(this.value)" />
+    </div>
+    <div class="topbar-right">
+      <button class="btn-new" onclick="newMemo()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M6 1v10M1 6h10"/>
+        </svg>
+        新規メモ
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace -->
+  <div class="workspace">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-section">フィルター</div>
+
+      <button class="filter-btn active" data-f="all" onclick="setFilter('all',this)">
+        <span class="filter-dot" style="background:#9B9890;"></span>
+        すべて
+        <span class="filter-count" id="fc-all">0</span>
+      </button>
+      <button class="filter-btn" data-f="本" onclick="setFilter('本',this)">
+        <span class="filter-dot" style="background:#2C6FAC;"></span>
+        本
+        <span class="filter-count" id="fc-本">0</span>
+      </button>
+      <button class="filter-btn" data-f="映像" onclick="setFilter('映像',this)">
+        <span class="filter-dot" style="background:#5B50A8;"></span>
+        映像
+        <span class="filter-count" id="fc-映像">0</span>
+      </button>
+      <button class="filter-btn" data-f="タスク" onclick="setFilter('タスク',this)">
+        <span class="filter-dot" style="background:#2D5A3D;"></span>
+        タスク
+        <span class="filter-count" id="fc-タスク">0</span>
+      </button>
+      <button class="filter-btn" data-f="感情" onclick="setFilter('感情',this)">
+        <span class="filter-dot" style="background:#993556;"></span>
+        感情
+        <span class="filter-count" id="fc-感情">0</span>
+      </button>
+      <button class="filter-btn" data-f="その他" onclick="setFilter('その他',this)">
+        <span class="filter-dot" style="background:#888780;"></span>
+        その他
+        <span class="filter-count" id="fc-その他">0</span>
+      </button>
+    </nav>
+
+    <!-- Memo List -->
+    <div class="memo-list-wrap">
+      <div class="list-header">
+        <span class="list-header-title" id="list-label">すべてのメモ</span>
+      </div>
+      <div class="memo-list" id="memo-list">
+        <div class="list-empty">メモがありません</div>
+      </div>
+    </div>
+
+    <!-- Editor -->
+    <div class="editor-wrap" id="editor-wrap">
+
+      <!-- API Key Banner -->
+      <div class="api-banner" id="api-banner">
+        <span>⚡ AIタグ提案にはAPIキーが必要です</span>
+        <input type="password" id="api-key-input" placeholder="sk-ant-..." />
+        <button class="btn-sm" onclick="saveApiKey()">保存</button>
+      </div>
+
+      <!-- Empty State -->
+      <div class="editor-empty" id="editor-empty" style="flex:1; display:flex;">
+        <svg class="editor-empty-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="8" y="6" width="32" height="36" rx="4"/>
+          <path d="M16 16h16M16 23h16M16 30h10" stroke-linecap="round"/>
+        </svg>
+        <div class="editor-empty-text">メモを選択するか、新規作成してください</div>
+      </div>
+
+      <!-- Editor Panel -->
+      <div class="editor-panel" id="editor-panel" style="display:none;">
+        <div class="editor-header">
+          <input class="ed-title" id="ed-title" type="text" placeholder="タイトルを入力..." oninput="markDirty()" />
+          <div class="tags-area">
+            <span class="tags-label">タグ</span>
+            <div id="active-tags"></div>
+            <div style="position:relative;">
+              <button class="btn-ai" id="btn-ai" onclick="toggleSuggest()">
+                <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm1 11H9v-2h2v2zm0-4H9V6h2v3z"/>
+                </svg>
+                AIタグ提案
+              </button>
+              <div class="suggest-popup" id="suggest-popup">
+                <div class="suggest-heading">提案タグ</div>
+                <div id="suggest-inner">
+                  <div class="loading-dots">分析中 <div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="editor-body">
+          <textarea class="ed-textarea" id="ed-body" placeholder="ここにメモを書いてください..." oninput="markDirty()"></textarea>
+        </div>
+
+        <div class="editor-footer">
+          <span class="footer-meta" id="footer-meta"></span>
+          <button class="btn btn-danger" onclick="deleteMemo()">削除</button>
+          <button class="btn btn-primary" id="btn-save" onclick="saveMemo()" style="display:none;">保存</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== Config ===== */
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const STORAGE_KEY_MEMOS = 'techo_memos';
+const STORAGE_KEY_API  = 'techo_api_key';
+
+/* ===== Tag Styles ===== */
+const TAG_STYLES = {
+  '本':      { bg:'#E8F0F8', color:'#1A3A5C' },
+  '読書':    { bg:'#E8F0F8', color:'#1A3A5C' },
+  '買いたい':{ bg:'#FEF3C7', color:'#78350F' },
+  '映像':    { bg:'#EDEBF8', color:'#352D6B' },
+  'アニメ':  { bg:'#EDEBF8', color:'#352D6B' },
+  '映画':    { bg:'#EDEBF8', color:'#352D6B' },
+  '動画':    { bg:'#EDEBF8', color:'#352D6B' },
+  'タスク':  { bg:'#E8F0EB', color:'#1A3D28' },
+  'ToDo':    { bg:'#E8F0EB', color:'#1A3D28' },
+  '感情':    { bg:'#F8EBF0', color:'#5C1A35' },
+  '感謝':    { bg:'#F8EBF0', color:'#5C1A35' },
+  'ストレス':{ bg:'#FEE2E2', color:'#991B1B' },
+  'モチベ':  { bg:'#E8F0EB', color:'#1A3D28' },
+  '日記':    { bg:'#FEF3C7', color:'#78350F' },
+  'その他':  { bg:'#F0EDE8', color:'#4A4845' },
+};
+
+function tagStyle(t) {
+  return TAG_STYLES[t] || { bg:'#F0EDE8', color:'#4A4845' };
+}
+
+/* ===== Category Mapping ===== */
+const CATEGORY = {
+  '本':   ['本','読書','買いたい'],
+  '映像': ['映像','アニメ','映画','動画'],
+  'タスク':['タスク','ToDo'],
+  '感情': ['感情','感謝','ストレス','モチベ','日記'],
+};
+function detectCategory(tags) {
+  for (const [cat, group] of Object.entries(CATEGORY)) {
+    if (tags.some(t => group.includes(t))) return cat;
+  }
+  return 'その他';
+}
+
+/* ===== State ===== */
+let memos = [];
+let currentId = null;
+let isDirty = false;
+let currentFilter = 'all';
+let searchQuery = '';
+let apiKey = '';
+
+/* ===== Init ===== */
+(function init() {
+  const raw = localStorage.getItem(STORAGE_KEY_MEMOS);
+  if (raw) {
+    memos = JSON.parse(raw).map(m => ({ ...m, updatedAt: new Date(m.updatedAt) }));
+  } else {
+    memos = [
+      { id:1, title:'読みたい本リスト', body:'・ゼロ・トゥ・ワン（ピーター・ティール）\n・FACTFULNESS\n・思考の整理学', tags:['本','読書'], updatedAt: new Date(Date.now()-7200000) },
+      { id:2, title:'今季見るアニメ',   body:'・薬屋のひとりごと\n・葬送のフリーレン\n・推しの子 2期', tags:['映像','アニメ'], updatedAt: new Date(Date.now()-18000000) },
+      { id:3, title:'今週のタスク',     body:'□ レポート提出（金曜）\n□ 歯医者の予約\n□ 図書館の本を返す', tags:['タスク','ToDo'], updatedAt: new Date(Date.now()-36000000) },
+      { id:4, title:'今日の気持ち',     body:'なんか疲れた一日だった。でも夕方の空がきれいで少し元気になった。', tags:['感情','日記'], updatedAt: new Date(Date.now()-86400000) },
+    ];
+    saveMemos();
+  }
+  apiKey = localStorage.getItem(STORAGE_KEY_API) || '';
+  if (apiKey) document.getElementById('api-banner').style.display = 'none';
+  renderAll();
+})();
+
+/* ===== Persistence ===== */
+function saveMemos() {
+  localStorage.setItem(STORAGE_KEY_MEMOS, JSON.stringify(memos));
+}
+
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) { showToast('APIキーを入力してください'); return; }
+  apiKey = key;
+  localStorage.setItem(STORAGE_KEY_API, key);
+  document.getElementById('api-banner').style.display = 'none';
+  showToast('APIキーを保存しました');
+}
+
+/* ===== Render ===== */
+function renderAll() {
+  renderCounts();
+  renderList();
+}
+
+function renderCounts() {
+  const counts = { all: memos.length, '本':0, '映像':0, 'タスク':0, '感情':0, 'その他':0 };
+  memos.forEach(m => {
+    const cat = detectCategory(m.tags);
+    counts[cat] = (counts[cat] || 0) + 1;
+  });
+  ['all','本','映像','タスク','感情','その他'].forEach(k => {
+    const el = document.getElementById('fc-' + k);
+    if (el) el.textContent = counts[k] || 0;
+  });
+}
+
+function renderList() {
+  const filtered = memos
+    .filter(m => {
+      if (currentFilter !== 'all') {
+        const cat = detectCategory(m.tags);
+        if (cat !== currentFilter) return false;
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return m.title.toLowerCase().includes(q) || m.body.toLowerCase().includes(q);
+      }
+      return true;
+    })
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+
+  const labelMap = { all:'すべてのメモ', '本':'本', '映像':'映像', 'タスク':'タスク', '感情':'感情', 'その他':'その他' };
+  document.getElementById('list-label').textContent = labelMap[currentFilter] || 'メモ';
+
+  const list = document.getElementById('memo-list');
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="list-empty">該当するメモがありません</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(m => {
+    const dateStr = m.updatedAt.toLocaleDateString('ja-JP', { month:'short', day:'numeric' });
+    const tags = m.tags.map(t => {
+      const s = tagStyle(t);
+      return `<span class="tag-pill" style="background:${s.bg};color:${s.color};">${t}</span>`;
+    }).join('');
+    return `
+      <div class="memo-item${m.id === currentId ? ' active' : ''}" onclick="selectMemo(${m.id})">
+        <div class="memo-item-date">${dateStr}</div>
+        <div class="memo-item-title">${esc(m.title) || '（タイトルなし）'}</div>
+        <div class="memo-item-preview">${esc(m.body.replace(/\n/g,' ').slice(0,50))}</div>
+        <div class="memo-item-tags">${tags}</div>
+      </div>`;
+  }).join('');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ===== Memo CRUD ===== */
+let nextId = 100;
+function newMemo() {
+  const m = { id: Date.now(), title:'', body:'', tags:[], updatedAt: new Date() };
+  memos.unshift(m);
+  saveMemos();
+  renderAll();
+  selectMemo(m.id);
+  document.getElementById('ed-title').focus();
+  markDirty();
+}
+
+function selectMemo(id) {
+  currentId = id;
+  isDirty = false;
+  const m = memos.find(x => x.id === id);
+  if (!m) return;
+
+  document.getElementById('editor-empty').style.display = 'none';
+  document.getElementById('editor-panel').style.display = 'flex';
+  document.getElementById('ed-title').value = m.title;
+  document.getElementById('ed-body').value = m.body;
+  document.getElementById('footer-meta').textContent =
+    m.updatedAt.toLocaleDateString('ja-JP', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  document.getElementById('btn-save').style.display = 'none';
+
+  renderActiveTags(m.tags);
+  closeSuggest();
+  renderList();
+}
+
+function renderActiveTags(tags) {
+  document.getElementById('active-tags').innerHTML = tags.map(t => {
+    const s = tagStyle(t);
+    return `<span class="tag-chip" style="background:${s.bg};color:${s.color};">${esc(t)}<span class="rm" onclick="removeTag('${t}')">×</span></span>`;
+  }).join('');
+}
+
+function removeTag(t) {
+  const m = memos.find(x => x.id === currentId);
+  if (!m) return;
+  m.tags = m.tags.filter(x => x !== t);
+  renderActiveTags(m.tags);
+  markDirty();
+  renderList();
+  renderCounts();
+}
+
+function markDirty() {
+  isDirty = true;
+  document.getElementById('btn-save').style.display = '';
+}
+
+function saveMemo() {
+  const m = memos.find(x => x.id === currentId);
+  if (!m) return;
+  m.title = document.getElementById('ed-title').value;
+  m.body  = document.getElementById('ed-body').value;
+  m.updatedAt = new Date();
+  document.getElementById('footer-meta').textContent =
+    m.updatedAt.toLocaleDateString('ja-JP', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  isDirty = false;
+  document.getElementById('btn-save').style.display = 'none';
+  saveMemos();
+  renderAll();
+  showToast('保存しました ✓');
+}
+
+function deleteMemo() {
+  if (!currentId) return;
+  if (!confirm('このメモを削除しますか？')) return;
+  memos = memos.filter(x => x.id !== currentId);
+  currentId = null;
+  saveMemos();
+  document.getElementById('editor-empty').style.display = '';
+  document.getElementById('editor-panel').style.display = 'none';
+  renderAll();
+  showToast('削除しました');
+}
+
+/* ===== Filter / Search ===== */
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+function onSearch(q) {
+  searchQuery = q;
+  renderList();
+}
+
+/* ===== AI Tag Suggestion ===== */
+let suggestOpen = false;
+
+function toggleSuggest() {
+  if (suggestOpen) { closeSuggest(); return; }
+  openSuggest();
+}
+
+function openSuggest() {
+  const m = memos.find(x => x.id === currentId);
+  if (!m) return;
+  const title = document.getElementById('ed-title').value;
+  const body  = document.getElementById('ed-body').value;
+  const text  = [title, body].filter(Boolean).join('\n').trim();
+  if (!text) { showToast('メモを入力してください'); return; }
+
+  suggestOpen = true;
+  const popup = document.getElementById('suggest-popup');
+  popup.classList.add('open');
+  document.getElementById('suggest-inner').innerHTML = `
+    <div class="loading-dots">分析中 <div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+
+  if (!apiKey) {
+    setTimeout(() => {
+      document.getElementById('suggest-inner').innerHTML =
+        '<div style="font-size:12px;color:#92400E;">APIキーを設定してください（画面上部のバナー）</div>';
+    }, 500);
+    return;
+  }
+
+  const system = `あなたはメモの内容を分析してタグを提案するアシスタントです。
+以下のカテゴリと既存タグを参考に、メモの内容にふさわしいタグを3〜5個提案してください。
+
+カテゴリ: 本, 映像, タスク, 感情, その他
+利用可能なタグ例: 読書, 買いたい, アニメ, 映画, 動画, ToDo, 感謝, ストレス, モチベ, 日記, SF, ミステリー, 自己啓発, ビジネス, 技術, 音楽, 料理, 旅行, 健康, 勉強, etc.
+
+必ずJSONのみで返してください（説明文・コードブロック不要）:
+{"tags":["タグ1","タグ2","タグ3"]}
+
+すでに付いているタグ: ${JSON.stringify(m.tags)}`;
+
+  fetch(ANTHROPIC_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      system,
+      messages: [{ role:'user', content: `メモの内容:\n${text}` }],
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    const raw = data.content?.find(c => c.type === 'text')?.text || '{}';
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const suggested = (parsed.tags || []).filter(t => !m.tags.includes(t));
+
+    if (suggested.length === 0) {
+      document.getElementById('suggest-inner').innerHTML =
+        '<div style="font-size:12px;color:var(--text-3);">すでに適切なタグが付いています</div>';
+    } else {
+      document.getElementById('suggest-inner').innerHTML =
+        `<div class="suggest-tags">${suggested.map(t =>
+          `<button class="suggest-tag" onclick="addTag('${t.replace(/'/g,"\\'")}'); return false;">${esc(t)}</button>`
+        ).join('')}</div>`;
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById('suggest-inner').innerHTML =
+      '<div style="font-size:12px;color:#991B1B;">エラーが発生しました。APIキーを確認してください。</div>';
+  });
+}
+
+function closeSuggest() {
+  suggestOpen = false;
+  document.getElementById('suggest-popup').classList.remove('open');
+}
+
+function addTag(t) {
+  const m = memos.find(x => x.id === currentId);
+  if (!m || m.tags.includes(t)) return;
+  m.tags.push(t);
+  renderActiveTags(m.tags);
+  markDirty();
+  closeSuggest();
+  renderList();
+  renderCounts();
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#btn-ai') && !e.target.closest('#suggest-popup')) closeSuggest();
+});
+
+/* ===== Toast ===== */
+let toastTimer;
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ===== Keyboard Shortcuts ===== */
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's' && isDirty) {
+    e.preventDefault();
+    saveMemo();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    e.preventDefault();
+    newMemo();
+  }
+});
+</script>
+</body>
+</html>
